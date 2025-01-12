@@ -36,16 +36,15 @@ switch ($method) {
         $isAuthenticated = $user->login();
 
         if ($isAuthenticated) {
-            // Tambahkan pengecekan untuk key "id"
             $userId = isset($isAuthenticated['id']) ? $isAuthenticated['id'] : null;
 
-            // Jika login berhasil, buat JWT token
+            // Perbarui payload untuk menyertakan ID pengguna
             $payload = [
                 "iss" => "http://localhost", // Server issuer
                 "iat" => time(), // Waktu token dibuat
-                "exp" => time() + (60 * 60), // Waktu token kedaluwarsa (1 jam)
+                "exp" => time() + (60 * 60), // Kedaluwarsa dalam 1 jam
                 "data" => [
-                    "id" => $userId, // ID pengguna
+                    "id" => $userId, // Tambahkan ID pengguna
                     "email" => $isAuthenticated['email'], // Email pengguna
                     "role" => $isAuthenticated['role'] // Role pengguna
                 ]
@@ -55,16 +54,51 @@ switch ($method) {
 
             http_response_code(200); // OK
             echo json_encode([
+                "id" => $userId ,
                 "status" => "success",
                 "message" => "Login berhasil",
-                "token" => $jwt, // Tambahkan token ke respon
-                "data" => $isAuthenticated
+                "token" => $jwt
             ]);
         } else {
             http_response_code(404); // Not Found
             echo json_encode([
                 "status" => "error",
                 "message" => "Email atau password salah"
+            ]);
+        }
+        break;
+
+    case 'GET':
+        // Ambil token dari header Authorization
+        $headers = getallheaders();
+        if (!isset($headers['Authorization'])) {
+            http_response_code(400); // Bad Request
+            echo json_encode([
+                "status" => "error",
+                "message" => "Token tidak ditemukan"
+            ]);
+            exit;
+        }
+
+        $authHeader = $headers['Authorization'];
+        $jwt = str_replace('Bearer ', '', $authHeader); // Hapus "Bearer " dari header
+
+        try {
+            // Verifikasi token JWT
+            $decoded = JWT::decode($jwt, new Key($key, 'HS256'));
+
+            http_response_code(200); // OK
+            echo json_encode([
+                "status" => "success",
+                "message" => "Token valid",
+                "data" => $decoded->data // Sertakan data dari token
+            ]);
+        } catch (Exception $e) {
+            http_response_code(401); // Unauthorized
+            echo json_encode([
+                "status" => "error",
+                "message" => "Token tidak valid",
+                "error" => $e->getMessage()
             ]);
         }
         break;

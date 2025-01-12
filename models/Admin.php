@@ -65,4 +65,23 @@ class Admin {
             return false;
         }
     }
+
+    // Method untuk mendapatkan data admin berdasarkan ID
+    public function getAdminById($id) {
+        $query = "SELECT id, nama, email FROM " . $this->table . " WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        if (!$stmt) {
+            throw new Exception("Prepare statement failed: " . $this->conn->error);
+        }
+
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            return $result->fetch_assoc();
+        } else {
+            return null; // Jika admin tidak ditemukan
+        }
+    }
 }

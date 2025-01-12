@@ -15,7 +15,8 @@ class User {
     }
 
     public function login() {
-        $query = "SELECT email, password, role FROM " . $this->table . " WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))";
+        // Tambahkan kolom `id` pada query untuk mengambil ID pengguna
+        $query = "SELECT iid, email, password, role FROM " . $this->table . " WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))";
         $stmt = $this->conn->prepare($query);
 
         if (!$stmt) {
@@ -41,6 +42,7 @@ class User {
                     "iat" => time(),
                     "exp" => time() + (60 * 60), // Kedaluwarsa dalam 1 jam
                     "data" => [
+                        "id" => $row['iid'], // Sertakan ID pengguna ke dalam payload
                         "email" => $row['email'],
                         "role" => $row['role']
                     ]
@@ -50,7 +52,9 @@ class User {
 
                 error_log("Password cocok. Token berhasil dibuat.");
 
+                // Sertakan ID dalam hasil login
                 return [
+                    "id" => $row['iid'], // Tambahkan ID pengguna ke hasil
                     "email" => $row['email'],
                     "role" => $row['role'],
                     "token" => $jwt
