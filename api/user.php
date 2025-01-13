@@ -3,6 +3,7 @@ header("Content-Type: application/json");
 require_once '../config/database.php';
 require_once '../models/User.php';
 require_once '../vendor/autoload.php'; // Tambahkan autoload JWT
+require_once '../middleware/jwt_middleware.php'; // Import middleware JWT
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -18,7 +19,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $key = "your_secret_key";
 
 switch ($method) {
-    case 'POST':
+    case 'POST': // Login User
         $input = json_decode(file_get_contents('php://input'), true);
 
         if (!isset($input['email'], $input['password'])) {
@@ -38,7 +39,7 @@ switch ($method) {
         if ($isAuthenticated) {
             $userId = isset($isAuthenticated['id']) ? $isAuthenticated['id'] : null;
 
-            // Perbarui payload untuk menyertakan ID pengguna
+            // Buat payload JWT dengan data user
             $payload = [
                 "iss" => "http://localhost", // Server issuer
                 "iat" => time(), // Waktu token dibuat
@@ -54,7 +55,7 @@ switch ($method) {
 
             http_response_code(200); // OK
             echo json_encode([
-                "id" => $userId ,
+                "id" => $userId,
                 "status" => "success",
                 "message" => "Login berhasil",
                 "token" => $jwt
@@ -68,30 +69,16 @@ switch ($method) {
         }
         break;
 
-    case 'GET':
-        // Ambil token dari header Authorization
-        $headers = getallheaders();
-        if (!isset($headers['Authorization'])) {
-            http_response_code(400); // Bad Request
-            echo json_encode([
-                "status" => "error",
-                "message" => "Token tidak ditemukan"
-            ]);
-            exit;
-        }
-
-        $authHeader = $headers['Authorization'];
-        $jwt = str_replace('Bearer ', '', $authHeader); // Hapus "Bearer " dari header
-
+    case 'GET': // Validasi Token
         try {
-            // Verifikasi token JWT
-            $decoded = JWT::decode($jwt, new Key($key, 'HS256'));
+            // Gunakan middleware untuk validasi token JWT
+            $decodedData = validateJWT($key); // Memanggil fungsi dari jwt_middleware.php
 
             http_response_code(200); // OK
             echo json_encode([
                 "status" => "success",
                 "message" => "Token valid",
-                "data" => $decoded->data // Sertakan data dari token
+                "data" => $decodedData // Sertakan data dari token
             ]);
         } catch (Exception $e) {
             http_response_code(401); // Unauthorized
